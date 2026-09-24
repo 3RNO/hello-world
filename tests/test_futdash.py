@@ -511,3 +511,37 @@ class TestFutDatabaseSource(unittest.TestCase):
     def test_registered_under_both_names(self):
         for name in ("futdb", "futdatabase"):
             self.assertIsInstance(sources.build(name), sources.FutDatabaseSource)
+
+
+class TestRealLadder(unittest.TestCase):
+    """Against real captured data: a real club's fodder scores and real
+    fut.gg PC prices from FC 27 launch week."""
+
+    def setUp(self):
+        self.conn = db.connect(":memory:")
+        base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "futdash", "fixtures")
+        with open(os.path.join(base, "easysbc_stats.json"), encoding="utf-8") as fh:
+            easysbc.store(self.conn, easysbc.load(fh.read()))
+        import json as _json
+        with open(os.path.join(base, "futgg_ratings_pc_2026-09-24.json"), encoding="utf-8") as fh:
+            prices = _json.load(fh)["prices"]
+        fodder.record(self.conn, {int(k): v for k, v in prices.items()}, platform="pc")
+
+    def test_the_floor_bands_share_a_price(self):
+        # The finding this data exists to record: 82, 83 and 84 all at 650.
+        by_rating = {r["rating"]: r for r in easysbc.ladder(self.conn)}
+        self.assertEqual({by_rating[r]["price"] for r in (82, 83, 84)}, {650})
+
+    def test_84s_are_the_best_value_at_that_floor(self):
+        # Equal price, far higher score -- so the highest band on the floor wins.
+        self.assertEqual(easysbc.best_buys(self.conn)[0]["rating"], 84)
+
+    def test_81s_beat_82s_despite_the_lower_rating(self):
+        # 82s cost more than 81s for proportionally less score.
+        by_rating = {r["rating"]: r for r in easysbc.ladder(self.conn)}
+        self.assertGreater(by_rating[81]["score_per_coin"], by_rating[82]["score_per_coin"])
+
+    def test_ranking_is_not_simply_by_rating(self):
+        order = [r["rating"] for r in easysbc.best_buys(self.conn, limit=4)]
+        self.assertEqual(order, [84, 83, 81, 82])

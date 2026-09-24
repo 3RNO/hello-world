@@ -1,0 +1,9 @@
+{
+  "_source": "fut.gg/cheapest-by-rating, PC market, scraped 2026-09-24",
+  "_note": "FC 27 launch week. 82/83/84 all sitting on the same 650 floor -- the market had not yet differentiated them.",
+  "prices": {
+    "81": 500, "82": 650, "83": 650, "84": 650, "85": 1200,
+    "86": 3300, "87": 5500, "88": 8100, "89": 16250, "90": 22500,
+    "91": 160000, "92": 225000, "93": 2150000
+  }
+}
