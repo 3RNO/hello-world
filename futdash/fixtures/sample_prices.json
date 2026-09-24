@@ -1,0 +1,12 @@
+[
+  {"name": "Kylian Mbappe", "rating": 91, "version": "gold rare", "price": 1250000, "platform": "console"},
+  {"name": "Erling Haaland", "rating": 91, "version": "gold rare", "price": 980000, "platform": "console"},
+  {"name": "Jude Bellingham", "rating": 90, "version": "gold rare", "price": 640000, "platform": "console"},
+  {"name": "Vinicius Jr", "rating": 90, "version": "gold rare", "price": 720000, "platform": "console"},
+  {"name": "Rodri", "rating": 89, "version": "gold rare", "price": 210000, "platform": "console"},
+  {"name": "Bukayo Saka", "rating": 87, "version": "gold rare", "price": 58000, "platform": "console"},
+  {"name": "Alexis Mac Allister", "rating": 85, "version": "gold rare", "price": 21000, "platform": "console"},
+  {"name": "Micky van de Ven", "rating": 84, "version": "gold rare", "price": 13500, "platform": "console"},
+  {"name": "Nico Williams", "rating": 84, "version": "gold rare", "price": 9800, "platform": "console"},
+  {"name": "Joao Neves", "rating": 83, "version": "gold rare", "price": 4200, "platform": "console"}
+]

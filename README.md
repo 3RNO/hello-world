@@ -1,90 +1,140 @@
-# Welcome to GitHub
+# FUT Dash
 
-Welcome to GitHub—where millions of developers work together on software. Ready to get started? Let’s learn how this all works by building and publishing your first GitHub Pages website!
+A local trading dashboard for EA FC Ultimate Team. It tracks prices, works
+out what you can pay, and tells you honestly whether you made money.
 
-## Repositories
+Built for **FC 27, PC market** — both configurable.
 
-Right now, we’re in your first GitHub **repository**. A repository is like a folder or storage space for your project. Your project's repository contains all its files such as code, documentation, images, and more. It also tracks every change that you—or your collaborators—make to each file, so you can always go back to previous versions of your project if you make any mistakes.
+It is decision support for manual trading. It does not connect to the Web
+App, automate bidding, or touch your EA account. You place every trade
+yourself.
 
-This repository contains three important files: The HTML code for your first website on GitHub, the CSS stylesheet that decorates your website with colors and fonts, and the **README** file. It also contains an image folder, with one image file.
+---
 
-## Describe your project
+## Why
 
-You are currently viewing your project's **README** file. **_README_** files are like cover pages or elevator pitches for your project. They are written in plain text or [Markdown language](https://guides.github.com/features/mastering-markdown/), and usually include a paragraph describing the project, directions on how to use it, who authored it, and more.
+The hard part of trading is not clicking. It is knowing what a card is
+worth, what you can pay to hit a margin, and whether last week actually
+made coins. Those are the three things here.
 
-[Learn more about READMEs](https://help.github.com/en/articles/about-readmes)
+The tax is the reason most of this exists. EA takes 5% of every sale, so
+a card bought at 10,000 and sold at 10,000 loses 500 coins, and its real
+break-even is 10,750. The dashboard never shows you a gross number.
 
-## Your first website
+## Install
 
-**GitHub Pages** is a free and easy way to create a website using the code that lives in your GitHub repositories. You can use GitHub Pages to build a portfolio of your work, create a personal website, or share a fun project that you coded with the world. GitHub Pages is automatically enabled in this repository, but when you create new repositories in the future, the steps to launch a GitHub Pages website will be slightly different.
+Nothing to install. Python 3.11+, standard library only.
 
-[Learn more about GitHub Pages](https://pages.github.com/)
-
-## Rename this repository to publish your site
-
-We've already set-up a GitHub Pages website for you, based on your personal username. This repository is called `hello-world`, but you'll rename it to: `username.github.io`, to match your website's URL address. If the first part of the repository doesn’t exactly match your username, it won’t work, so make sure to get it right.
-
-Let's get started! To update this repository’s name, click the `Settings` tab on this page. This will take you to your repository’s settings page. 
-
-![repo-settings-image](https://user-images.githubusercontent.com/18093541/63130482-99e6ad80-bf88-11e9-99a1-d3cf1660b47e.png)
-
-Under the **Repository Name** heading, type: `username.github.io`, where username is your username on GitHub. Then click **Rename**—and that’s it. When you’re done, click your repository name or browser’s back button to return to this page.
-
-<img width="1039" alt="rename_screenshot" src="https://user-images.githubusercontent.com/18093541/63129466-956cc580-bf85-11e9-92d8-b028dd483fa5.png">
-
-Once you click **Rename**, your website will automatically be published at: https://your-username.github.io/. The HTML file—called `index.html`—is rendered as the home page and you'll be making changes to this file in the next step.
-
-Congratulations! You just launched your first GitHub Pages website. It's now live to share with the entire world
-
-## Making your first edit
-
-When you make any change to any file in your project, you’re making a **commit**. If you fix a typo, update a filename, or edit your code, you can add it to GitHub as a commit. Your commits represent your project’s entire history—and they’re all saved in your project’s repository.
-
-With each commit, you have the opportunity to write a **commit message**, a short, meaningful comment describing the change you’re making to a file. So you always know exactly what changed, no matter when you return to a commit.
-
-## Practice: Customize your first GitHub website by writing HTML code
-
-Want to edit the site you just published? Let’s practice commits by introducing yourself in your `index.html` file. Don’t worry about getting it right the first time—you can always build on your introduction later.
-
-Let’s start with this template:
-
-```
-<p>Hello World! I’m [username]. This is my website!</p>
+```bash
+python3 -m futdash --demo      # example data, nothing written to disk
+python3 -m futdash             # your own database
 ```
 
-To add your introduction, copy our template and click the edit pencil icon at the top right hand corner of the `index.html` file.
+Then open <http://127.0.0.1:8765>.
 
-<img width="997" alt="edit-this-file" src="https://user-images.githubusercontent.com/18093541/63131820-0794d880-bf8d-11e9-8b3d-c096355e9389.png">
+It binds to localhost and has no authentication. It holds your trade
+history — do not expose it to a network.
 
+## What's in it
 
-Delete this placeholder line:
+**Market** — cards trading below their own recent median, with a *new low*
+marker and a *thin* warning when there is too little history to trust.
+Risers and fallers alongside, because a card 10% below median in a
+downtrend is not a bargain.
+
+**Snipe filters** — give it a target margin, get a max buy-now, a max bid
+and a relist price. Every number is snapped down to a legal price
+increment, so they are values you can actually type into a search. It also
+says how much history the figure rests on; a margin computed from two
+snapshots is fiction and it will tell you so.
+
+**Fodder** — cheapest price per rating, and the cost of each step up the
+ladder. The *step ratio* is the useful column: where it is low, that band
+is cheap for what it contributes. At the time of writing 85s cost 1.23×
+what 84s cost, which is why they were worth buying ahead of the first
+SBCs.
+
+**Holdings** — open positions marked against the latest known price, with
+break-even including tax.
+
+**Journal** — every trade, and post-tax ROI grouped by method. This is the
+number that should steer where you spend your time.
+
+## Getting prices in
+
+Four ways, in order of how much you should trust them:
+
+| Source | How | Reliability |
+|---|---|---|
+| Manual | Type it into the dashboard | Always works |
+| CSV | `python3 -m futdash --import prices.csv` | Always works |
+| fut.gg | `POST /api/refresh {"source": "fut.gg", "targets": [...]}` | **Unverified** |
+| futbin | `POST /api/refresh {"source": "futbin", "targets": [...]}` | **Unverified** |
+
+CSV columns: `name`, `price`, and optionally `rating`, `version`,
+`platform`.
+
+**On the two scrapers:** they were written against the sites' documented
+shape but could not be tested — the sandbox this was built in blocks both
+domains at the network policy, so neither adapter has ever made a real
+request. Treat them as a starting point. Each keeps its parsing in a
+single `_parse` method, and both raise a readable error rather than
+silently recording nothing, so when a site moves its markup you will know
+and there is one method to fix. `FUTDATABASE` (futdatabase.com) is a free
+API and is probably the better long-term source; there is no adapter for
+it yet.
+
+Manual and CSV never break. Keep one wired up.
+
+## Configuration
+
+Environment variables, all optional:
 
 ```
-<p>Welcome to your first GitHub Pages website!</p>
+FUTDASH_YEAR=27          # game year, used to build source URLs
+FUTDASH_PLATFORM=pc      # pc | console -- separate markets, different prices
+FUTDASH_MARGIN=0.2       # default target margin
+FUTDASH_DB=~/.futdash/futdash.db
+FUTDASH_HOST / FUTDASH_PORT
 ```
 
-Then, paste the template to line 15 and fill in the blanks.
+Platform matters more than it looks. The PC and console markets are
+completely separate and their prices are not interchangeable — most
+guides and price sites quote console by default.
 
-<img width="1032" alt="edit-githuboctocat-index" src="https://user-images.githubusercontent.com/18093541/63132339-c3a2d300-bf8e-11e9-8222-59c2702f6c42.png">
+## Tests
 
+```bash
+python3 -m unittest discover -s tests -v
+```
 
-When you’re done, scroll down to the `Commit changes` section near the bottom of the edit page. Add a short message explaining your change, like "Add my introduction", then click `Commit changes`.
+46 tests, covering the tax and price-increment maths, journal P/L, dip
+detection, fodder ratios and filter generation. The maths tests check
+properties rather than fixed values — that a max-buy always clears the
+margin it promised, and that every price the app produces is one the
+market would accept.
 
+## Layout
 
-<img width="1030" alt="add-my-username" src="https://user-images.githubusercontent.com/18093541/63131801-efbd5480-bf8c-11e9-9806-89273f027d16.png">
+```
+futdash/
+  tax.py         5% tax, price-increment ladder     <- everything depends on this
+  db.py          SQLite schema and player resolution
+  sources.py     price adapters (manual, CSV, fut.gg, futbin)
+  analytics.py   trends, dips, movers
+  fodder.py      cheapest-by-rating, step ratios
+  journal.py     trades, holdings, post-tax P/L
+  snipe.py       filter calculator
+  server.py      JSON API + static serving
+  static/        dashboard (vanilla JS, no dependencies)
+docs/research.md FUT trading playbook — methods, cycles, signals
+tests/
+```
 
-Once you click `Commit changes`, your changes will automatically be published on your GitHub Pages website. Refresh the page to see your new changes live in action.
+## Further reading
 
-:tada: You just made your first commit! :tada:
-
-## Extra Credit: Keep on building!
-
-Change the placeholder Octocat gif on your GitHub Pages website by [creating your own personal Octocat emoji](https://myoctocat.com/build-your-octocat/) or [choose a different Octocat gif from our logo library here](https://octodex.github.com/). Add that image to line 12 of your `index.html` file, in place of the `<img src=` link.
-
-Want to add even more code and fun styles to your GitHub Pages website? [Follow these instructions](https://github.com/github/personal-website) to build a fully-fledged static website.
-
-![octocat](./images/create-octocat.png)
-
-## Everything you need to know about GitHub
-
-Getting started is the hardest part. If there’s anything you’d like to know as you get started with GitHub, try searching [GitHub Help](https://help.github.com). Our documentation has tutorials on everything from changing your repository settings to configuring GitHub from your command line.
+[`docs/research.md`](docs/research.md) is a researched playbook covering
+trading methods and what each needs in capital and time, the weekly and
+promo market cycles, how to read price floors and extinction, and what is
+different about the PC market. It is worth reading before the dashboard is
+much use to you.

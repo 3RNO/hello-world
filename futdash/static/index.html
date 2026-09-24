@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FUT Dash</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>FUT Dash</h1>
+    <span class="chip" id="context">—</span>
+  </div>
+  <div class="actions">
+    <label class="platform">
+      <select id="platform">
+        <option value="pc">PC market</option>
+        <option value="console">Console market</option>
+      </select>
+    </label>
+    <button id="refresh" class="ghost">Reload</button>
+  </div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="market" class="active">Market</button>
+  <button data-tab="snipe">Snipe filters</button>
+  <button data-tab="fodder">Fodder</button>
+  <button data-tab="holdings">Holdings</button>
+  <button data-tab="journal">Journal</button>
+</nav>
+
+<main>
+  <section id="stats" class="tiles"></section>
+
+  <section class="tab" id="tab-market">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Below recent median</h2>
+        <p class="hint">Cards trading under their own median. Check the trend before buying — a falling knife also looks like a discount.</p>
+      </div>
+      <div id="dips"></div>
+    </div>
+    <div class="split">
+      <div class="panel">
+        <div class="panel-head"><h2>Rising</h2></div>
+        <div id="movers-up"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Falling</h2></div>
+        <div id="movers-down"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab hidden" id="tab-snipe">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Filter calculator</h2>
+        <p class="hint">Max prices are snapped down to legal bid increments, so they are values you can actually type in.</p>
+      </div>
+      <form id="snipe-form" class="row-form">
+        <input id="snipe-player" list="player-list" placeholder="Player name" required>
+        <datalist id="player-list"></datalist>
+        <label>Target margin
+          <input id="snipe-margin" type="number" value="20" min="1" max="500" step="1"> %
+        </label>
+        <button type="submit">Calculate</button>
+      </form>
+      <div id="snipe-result"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Watchlist</h2></div>
+      <div id="watchlist"></div>
+    </div>
+  </section>
+
+  <section class="tab hidden" id="tab-fodder">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Cheapest by rating</h2>
+        <p class="hint">Step ratio is what each rating costs over the band below it. A low ratio is where fodder value sits.</p>
+      </div>
+      <form id="fodder-form" class="row-form">
+        <input id="fodder-rating" type="number" placeholder="Rating" min="40" max="99" required>
+        <input id="fodder-price" type="number" placeholder="Cheapest price" min="150" required>
+        <button type="submit">Record</button>
+      </form>
+      <div id="fodder-table"></div>
+    </div>
+  </section>
+
+  <section class="tab hidden" id="tab-holdings">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Open positions</h2>
+        <p class="hint">Break-even already includes EA's 5% cut. Selling at what you paid is a loss.</p>
+      </div>
+      <div id="holdings"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Promo calendar</h2></div>
+      <div id="promos"></div>
+    </div>
+  </section>
+
+  <section class="tab hidden" id="tab-journal">
+    <div class="panel">
+      <div class="panel-head"><h2>Log a buy</h2></div>
+      <form id="buy-form" class="row-form">
+        <input id="buy-name" list="player-list" placeholder="Player" required>
+        <input id="buy-price" type="number" placeholder="Bought for" min="150" required>
+        <select id="buy-method">
+          <option value="snipe">Snipe</option>
+          <option value="bid">Bid</option>
+          <option value="invest">Invest</option>
+          <option value="fodder">Fodder</option>
+          <option value="pack">Pack pull</option>
+        </select>
+        <button type="submit">Add</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>By method</h2><p class="hint">Where your coins actually come from.</p></div>
+      <div id="by-method"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Trade log</h2></div>
+      <div id="trades"></div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>
