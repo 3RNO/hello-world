@@ -75,6 +75,29 @@ CREATE TABLE IF NOT EXISTS club (
 );
 CREATE INDEX IF NOT EXISTS idx_club_rating ON club (rating, untradeable);
 
+CREATE TABLE IF NOT EXISTS club_stats (
+    id               INTEGER PRIMARY KEY,
+    club_name        TEXT,
+    coins            INTEGER,
+    club_value       INTEGER,
+    potential_coins  INTEGER,
+    transfer_list    INTEGER,
+    sbc_fodder       INTEGER,
+    players_count    INTEGER,
+    rank             INTEGER,
+    scanned_at       TEXT,
+    imported_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS club_fodder (
+    id          INTEGER PRIMARY KEY,
+    rating      INTEGER NOT NULL,
+    count       INTEGER NOT NULL,
+    item_score  INTEGER NOT NULL,
+    imported_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_club_fodder ON club_fodder (rating);
+
 CREATE TABLE IF NOT EXISTS rating_floors (
     id       INTEGER PRIMARY KEY,
     rating   INTEGER NOT NULL,

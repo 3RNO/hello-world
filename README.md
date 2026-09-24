@@ -57,10 +57,15 @@ SBCs.
 **Holdings** — open positions marked against the latest known price, with
 break-even including tax.
 
-**Club** — paste a club scan in and it records what you own, split by
-tradeable and untradeable, with tradeable value after tax. This is what
-turns the fodder tab from *which band is cheap* into *which band is cheap
-and you are short of*.
+**Club** — paste a club scan in and it records what you own. From an
+EasySBC stats capture that means coins, club value, and how many cards you
+hold at every rating along with their SBC score.
+
+That unlocks the number the whole fodder question turns on: **score per
+coin**. Dividing a rating's SBC contribution by its market price says how
+much squad rating a coin actually buys there. A band can be cheap and
+still be bad value — on a real club, 84s came out worst per coin despite
+being the most expensive fodder held, while 78s were the best buy.
 
 **Journal** — every trade, and post-tax ROI grouped by method. This is the
 number that should steer where you spend your time.
@@ -93,8 +98,21 @@ Manual and CSV never break. Keep one wired up.
 
 ## Importing your club
 
-The club scanners (EasySBC and similar) have no export button, so the
-import takes a JSON capture from your browser instead:
+EasySBC has no export button, so the import takes a JSON capture from your
+browser. The endpoint worth grabbing is **`/user-clubs/stats`** on
+`api-fc27.easysbc.io`: it carries your coin balance, club value, and a
+count and SBC score for every rating band you hold.
+
+1. Open your club page on EasySBC while signed in.
+2. DevTools (`F12`) → **Network** tab → filter for `user-clubs`.
+3. Click the `stats` request → **Response** tab → copy the body.
+4. Paste it into the **Club** tab.
+
+> **Copy the Response tab, never the Headers tab.** The request headers
+> carry a bearer token that is valid for months. The response body holds
+> no credentials.
+
+The Club tab also accepts a raw player-list capture from any scanner:
 
 1. Open your club page on the scanner site while signed in.
 2. DevTools (`F12`) → **Network** tab → reload the page.

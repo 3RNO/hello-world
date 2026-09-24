@@ -6,7 +6,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from futdash import analytics, club, db, demo, fodder, journal, snipe, sources, tax
+from futdash import (analytics, club, db, demo, easysbc, fodder, journal,
+                     snipe, sources, tax)
 
 
 class TestTax(unittest.TestCase):
@@ -356,3 +357,86 @@ class TestClubImport(unittest.TestCase):
         self.assertEqual(gaps[89]["have"], 1)
         self.assertEqual(gaps[89]["short_by"], 2)
         self.assertEqual(gaps[89]["cost_to_fill"], 50_000)
+
+
+class TestEasySbcStats(unittest.TestCase):
+    """Tested against a real /user-clubs/stats capture."""
+
+    FIXTURE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           "futdash", "fixtures", "easysbc_stats.json")
+
+    def setUp(self):
+        self.conn = db.connect(":memory:")
+        with open(self.FIXTURE, encoding="utf-8") as fh:
+            self.raw = fh.read()
+
+    def test_reads_club_totals(self):
+        p = easysbc.load(self.raw)
+        self.assertEqual(p["coins"], 699_217)
+        self.assertEqual(p["players_count"], 222)
+        self.assertEqual(p["sbc_fodder"], 33_937)
+
+    def test_builds_the_fodder_ladder(self):
+        ladder = easysbc.load(self.raw)["fodder"]
+        self.assertEqual(len(ladder), 23)
+        self.assertEqual([r["rating"] for r in ladder][:3], [61, 62, 63])
+
+    def test_score_per_card_handles_mixed_scores(self):
+        # 84s total 9131 across 10 cards -- not a clean multiple, because
+        # cards of one rating can score differently.
+        by_rating = {r["rating"]: r for r in easysbc.load(self.raw)["fodder"]}
+        self.assertAlmostEqual(by_rating[84]["score_per_card"], 913.1, places=1)
+        self.assertAlmostEqual(by_rating[82]["score_per_card"], 340.0, places=1)
+
+    def test_scanned_at_is_parsed_from_millis(self):
+        self.assertTrue(easysbc.load(self.raw)["scanned_at"].startswith("2026-"))
+
+    def test_rejects_a_payload_without_fodder(self):
+        with self.assertRaises(easysbc.StatsImportError):
+            easysbc.load({"clubName": "x", "coins": 1})
+
+    def test_rejects_non_json(self):
+        with self.assertRaises(easysbc.StatsImportError):
+            easysbc.load("<html>")
+
+    def test_store_then_read_back(self):
+        easysbc.store(self.conn, easysbc.load(self.raw))
+        s = easysbc.stats(self.conn)
+        self.assertEqual(s["club_name"], "FC26 PTSD")
+        self.assertEqual(s["players_count"], 222)
+
+    def test_import_replaces_rather_than_accumulates(self):
+        parsed = easysbc.load(self.raw)
+        easysbc.store(self.conn, parsed)
+        easysbc.store(self.conn, parsed)
+        self.assertEqual(len(easysbc.ladder(self.conn)), 23)
+
+    def test_score_per_coin_is_none_without_a_price(self):
+        easysbc.store(self.conn, easysbc.load(self.raw))
+        self.assertTrue(all(r["score_per_coin"] is None for r in easysbc.ladder(self.conn)))
+
+    def test_score_per_coin_uses_recorded_prices(self):
+        easysbc.store(self.conn, easysbc.load(self.raw))
+        fodder.record(self.conn, {84: 9_000, 78: 500})
+        by_rating = {r["rating"]: r for r in easysbc.ladder(self.conn)}
+        self.assertAlmostEqual(by_rating[84]["score_per_coin"], 913.1 / 9_000, places=4)
+        self.assertAlmostEqual(by_rating[78]["score_per_coin"], 140.0 / 500, places=4)
+
+    def test_best_buys_ranks_by_value_not_by_rating(self):
+        easysbc.store(self.conn, easysbc.load(self.raw))
+        # 84s are the priciest but the worst value per coin here.
+        fodder.record(self.conn, {84: 9_000, 78: 500})
+        best = easysbc.best_buys(self.conn)
+        self.assertEqual(best[0]["rating"], 78)
+        self.assertEqual(best[0]["vs_best_pct"], 100.0)
+
+    def test_best_buys_skips_unpriced_bands(self):
+        easysbc.store(self.conn, easysbc.load(self.raw))
+        fodder.record(self.conn, {78: 500})
+        self.assertEqual([r["rating"] for r in easysbc.best_buys(self.conn)], [78])
+
+    def test_held_value_counts_the_whole_band(self):
+        easysbc.store(self.conn, easysbc.load(self.raw))
+        fodder.record(self.conn, {84: 9_000})
+        by_rating = {r["rating"]: r for r in easysbc.ladder(self.conn)}
+        self.assertEqual(by_rating[84]["held_value"], 10 * 9_000)

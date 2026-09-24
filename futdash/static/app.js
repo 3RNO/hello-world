@@ -127,12 +127,43 @@ async function loadFodder() {
 async function loadClub() {
   const c = await get('/api/club');
   const v = c.value;
-  $('#club-status').innerHTML = c.imported_at
-    ? `<p class="hint" style="padding:0 16px 14px">Last import ${c.imported_at.slice(0, 16).replace('T', ' ')} —
-       ${v.cards} cards, ${v.tradeable_cards} tradeable, worth
-       <strong>${coins(v.after_tax)}</strong> after tax${
-         v.unpriced_cards ? ` · <span class="warn">${v.unpriced_cards} without a known price</span>` : ''}</p>`
-    : '<p class="empty">No club imported yet.</p>';
+  const s = c.stats;
+  if (s) {
+    $('#stats').innerHTML = [
+      ['Coins', coins(s.coins), ''],
+      ['Club value', coins(s.club_value), ''],
+      ['Potential coins', coins(s.potential_coins), ''],
+      ['On transfer list', coins(s.transfer_list), ''],
+      ['SBC fodder score', coins(s.sbc_fodder), ''],
+      ['Players', s.players_count, ''],
+    ].map(([k, val, cl]) => `<div class="tile"><div class="k">${k}</div><div class="v ${cl}">${val}</div></div>`).join('');
+  }
+
+  const best = new Set((c.best_buys || []).slice(0, 3).map((r) => r.rating));
+  $('#club-ladder').innerHTML = table(c.ladder, [
+    { h: 'Rating', k: 'rating' },
+    { h: 'Held', k: 'count', num: true },
+    { h: 'Score / card', k: 'score_per_card', fmt: (x) => x.toFixed(0), num: true },
+    { h: 'Price', k: 'price', fmt: (x) => (x == null ? '—' : coins(x)), num: true },
+    { h: 'Score / coin', k: 'score_per_coin', num: true,
+      fmt: (x) => (x == null ? '<span class="sub">no price</span>' : x.toFixed(4)),
+      cls: (x, r) => (best.has(r.rating) ? 'good' : '') },
+    { h: '', k: 'rating', fmt: (x) => (best.has(x) ? '<span class="good">best value</span>' : '') },
+  ], 'Import your club stats above to see the fodder ladder.');
+
+  const lines = [];
+  if (s) {
+    lines.push(`${s.club_name} · rank ${coins(s.rank)} · ${s.players_count} players` +
+      (s.scanned_at ? ` · scanned ${s.scanned_at.slice(0, 16).replace('T', ' ')}` : ''));
+  }
+  if (v.cards) {
+    lines.push(`${v.cards} cards imported, ${v.tradeable_cards} tradeable, worth ` +
+      `<strong>${coins(v.after_tax)}</strong> after tax` +
+      (v.unpriced_cards ? ` · <span class="warn">${v.unpriced_cards} without a price</span>` : ''));
+  }
+  $('#club-status').innerHTML = lines.length
+    ? `<p class="hint" style="padding:0 16px 14px">${lines.join('<br>')}</p>`
+    : '<p class="empty">Nothing imported yet.</p>';
 
   $('#club-inventory').innerHTML = table(c.gaps.length ? c.gaps : c.inventory, [
     { h: 'Rating', k: 'rating' },
@@ -253,7 +284,15 @@ $('#club-form').onsubmit = async (e) => {
   if (!raw) return toast('Paste the club JSON first.');
   let parsed;
   try { parsed = JSON.parse(raw); } catch (err) { return toast('That is not valid JSON.'); }
-  const res = await post('/api/club', { payload: parsed });
+  // An EasySBC stats payload and a raw player list are both accepted;
+  // try the stats shape first since it is the documented one.
+  let res = await post('/api/easysbc', { payload: parsed });
+  if (res.ok) {
+    $('#club-json').value = '';
+    toast(`Imported ${res.ratings} rating bands, ${res.players} players`);
+    return refresh();
+  }
+  res = await post('/api/club', { payload: parsed });
   if (!res.ok) return toast(res.error || 'Import failed.');
   $('#club-json').value = '';
   toast(`Imported ${res.imported} cards${res.with_prices ? `, ${res.with_prices} with prices` : ''}`);

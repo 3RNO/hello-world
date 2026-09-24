@@ -96,11 +96,11 @@
     <div class="panel">
       <div class="panel-head">
         <h2>Import your club</h2>
-        <p class="hint">No export button exists, so paste the JSON your browser received. DevTools &rarr; Network &rarr; reload &rarr; the response holding your player list &rarr; copy it here.</p>
+        <p class="hint">Paste the <strong>Response</strong> body from EasySBC's <code>/user-clubs/stats</code> request (DevTools &rarr; Network &rarr; filter <code>user-clubs</code>). Never the Headers tab &mdash; that carries your auth token.</p>
       </div>
       <form id="club-form" class="row-form" style="flex-direction:column;align-items:stretch">
-        <textarea id="club-json" rows="5" placeholder="Paste the club JSON here" style="font-family:ui-monospace,monospace;font-size:12px;resize:vertical"></textarea>
-        <div><button type="submit">Import club</button></div>
+        <textarea id="club-json" rows="5" placeholder="Paste the club stats JSON here" style="font-family:ui-monospace,monospace;font-size:12px;resize:vertical"></textarea>
+        <div><button type="submit">Import</button></div>
       </form>
       <div id="club-status"></div>
     </div>
@@ -110,6 +110,13 @@
         <p class="hint">Untradeable cards are counted but excluded from value &mdash; they are not coins you can spend.</p>
       </div>
       <div id="club-inventory"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Fodder value per coin</h2>
+        <p class="hint">SBC score a coin buys at each rating. This is the buy signal &mdash; a cheap band is not the same as a good one. Record cheapest prices on the Fodder tab to fill the blanks.</p>
+      </div>
+      <div id="club-ladder"></div>
     </div>
   </section>
 

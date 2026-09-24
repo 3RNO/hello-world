@@ -15,7 +15,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import analytics, club, config, db, fodder, journal, snipe, sources
+from . import analytics, club, config, db, easysbc, fodder, journal, snipe, sources
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 _lock = threading.Lock()
@@ -92,7 +92,10 @@ class Api:
         return {"inventory": club.inventory(self.conn),
                 "value": club.value(self.conn, plat),
                 "gaps": club.fodder_gaps(self.conn, platform=plat),
-                "imported_at": last}
+                "imported_at": last,
+                "stats": easysbc.stats(self.conn),
+                "ladder": easysbc.ladder(self.conn, plat),
+                "best_buys": easysbc.best_buys(self.conn, plat)}
 
     def promos(self, q):
         return [dict(r) for r in self.conn.execute(
@@ -138,6 +141,15 @@ class Api:
                                          (body or {}).get("platform", config.PLATFORM)
                                          if isinstance(body, dict) else config.PLATFORM)}
 
+    def import_stats(self, body):
+        """Takes an EasySBC /user-clubs/stats response."""
+        payload = body.get("payload", body) if isinstance(body, dict) else body
+        try:
+            parsed = easysbc.load(payload)
+        except easysbc.StatsImportError as exc:
+            return {"ok": False, "error": str(exc)}
+        return {"ok": True, **easysbc.store(self.conn, parsed)}
+
     def add_watch(self, body):
         pid = db.resolve_player(self.conn, body["name"], body.get("rating"),
                                 body.get("version"))
@@ -171,7 +183,7 @@ POSTS = {
     "/api/prices": "add_price", "/api/trades": "add_trade",
     "/api/trades/close": "close_trade", "/api/fodder": "add_fodder",
     "/api/watch": "add_watch", "/api/refresh": "refresh",
-    "/api/club": "import_club",
+    "/api/club": "import_club", "/api/easysbc": "import_stats",
 }
 HISTORY_RE = re.compile(r"^/api/history/(\d+)$")
 
