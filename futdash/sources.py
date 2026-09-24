@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import re
 import urllib.error
 import urllib.request
@@ -219,11 +220,87 @@ class FutbinSource(PriceSource):
                       source=self.name, ext_id=target)]
 
 
+class FutDatabaseSource(PriceSource):
+    """futdatabase.com -- the only documented, official API of the three.
+
+    It needs a free API key (`FUTDASH_FUTDB_KEY`, or pass `api_key`), and
+    it returns one player per request, so it is no use for sweeping the
+    market. For the thing it is actually needed for -- looking up a card
+    you are about to bid on -- one request is exactly right.
+
+    Prices refresh between 30 minutes and 24 hours depending on rating and
+    rarity, so treat a reading as recent rather than live.
+
+    UNVERIFIED against the live API -- see README.
+    """
+
+    name = "futdatabase"
+    BASE = "https://futdb.app/api"
+
+    def __init__(self, api_key: str | None = None, platform: str = config.PLATFORM):
+        self.api_key = api_key or os.environ.get("FUTDASH_FUTDB_KEY", "")
+        self.platform = platform
+
+    def _get(self, url: str) -> str:
+        if not self.api_key:
+            raise SourceError(
+                f"{self.name}: no API key. Get a free one at futdb.app and set "
+                "FUTDASH_FUTDB_KEY, or pass api_key.")
+        req = urllib.request.Request(url, headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+            "X-AUTH-TOKEN": self.api_key,
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                raise SourceError(f"{self.name}: key rejected (HTTP {exc.code})") from exc
+            if exc.code == 429:
+                raise SourceError(f"{self.name}: rate limited -- slow down") from exc
+            raise SourceError(f"{self.name}: HTTP {exc.code} for {url}") from exc
+        except urllib.error.URLError as exc:
+            raise SourceError(f"{self.name}: cannot reach {url} ({exc.reason})") from exc
+
+    def fetch(self, targets: Sequence[str]) -> list[Quote]:
+        """`targets` are futdb player ids. One request each -- it has no
+        bulk endpoint, so this is deliberately serial."""
+        out = []
+        for target in targets:
+            out.extend(self._parse(self._get(f"{self.BASE}/players/{target}/price"),
+                                   str(target)))
+        return out
+
+    def _parse(self, body: str, target: str) -> list[Quote]:
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError as exc:
+            raise SourceError(f"{self.name}: response was not JSON") from exc
+        # Documented shape is {"price": {"ps": {...}, "xbox": {...}, "pc": {...}}}
+        prices = payload.get("price", payload)
+        block = prices.get(self.platform) if isinstance(prices, dict) else None
+        if block is None and isinstance(prices, dict):
+            # PC is sometimes keyed differently; fall back to any block.
+            block = next((v for v in prices.values() if isinstance(v, dict)), None)
+        price = None
+        if isinstance(block, dict):
+            price = block.get("LCPrice") or block.get("lowest") or block.get("price")
+        if price in (None, "", 0):
+            raise SourceError(
+                f"{self.name}: no {self.platform} price for {target} -- either the "
+                "card is unpriced or the response shape has moved")
+        return [Quote(name=str(payload.get("name") or target),
+                      price=int(str(price).replace(",", "")),
+                      platform=self.platform, source=self.name, ext_id=target)]
+
+
 def build(kind: str, **kwargs) -> PriceSource:
     """Look up a source by name."""
     kinds = {
         "fixture": FixtureSource, "csv": CsvSource, "manual": ManualSource,
         "fut.gg": FutGgSource, "futgg": FutGgSource, "futbin": FutbinSource,
+        "futdatabase": FutDatabaseSource, "futdb": FutDatabaseSource,
     }
     if kind not in kinds:
         raise SourceError(f"unknown source {kind!r}; have {sorted(kinds)}")

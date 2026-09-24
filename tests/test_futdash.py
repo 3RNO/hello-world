@@ -471,3 +471,43 @@ class TestPlayerLookup(unittest.TestCase):
 
     def test_history_carries_its_source(self):
         self.assertTrue(all(p["source"] for p in analytics.history(self.conn, self.pid)))
+
+
+class TestFutDatabaseSource(unittest.TestCase):
+    """The one documented API of the three. Parsing is tested; the live
+    call is not, since the sandbox cannot reach it."""
+
+    def test_missing_key_is_reported_clearly(self):
+        src = sources.FutDatabaseSource(api_key="")
+        with self.assertRaises(sources.SourceError) as ctx:
+            src.fetch(["123"])
+        self.assertIn("API key", str(ctx.exception))
+
+    def test_parses_the_documented_shape(self):
+        src = sources.FutDatabaseSource(api_key="x", platform="pc")
+        q = src._parse('{"name":"Rodri","price":{"pc":{"LCPrice":"195,000"}}}', "123")
+        self.assertEqual((q[0].name, q[0].price, q[0].platform), ("Rodri", 195_000, "pc"))
+
+    def test_strips_thousands_separators(self):
+        src = sources.FutDatabaseSource(api_key="x", platform="pc")
+        self.assertEqual(src._parse('{"price":{"pc":{"LCPrice":"1,250,000"}}}', "1")[0].price,
+                         1_250_000)
+
+    def test_picks_the_configured_platform(self):
+        src = sources.FutDatabaseSource(api_key="x", platform="pc")
+        body = '{"price":{"pc":{"LCPrice":"100"},"ps":{"LCPrice":"999"}}}'
+        self.assertEqual(src._parse(body, "1")[0].price, 100)
+
+    def test_empty_price_is_an_error_not_a_zero(self):
+        src = sources.FutDatabaseSource(api_key="x", platform="pc")
+        with self.assertRaises(sources.SourceError):
+            src._parse('{"price":{"pc":{}}}', "1")
+
+    def test_non_json_is_reported(self):
+        src = sources.FutDatabaseSource(api_key="x")
+        with self.assertRaises(sources.SourceError):
+            src._parse("<html>", "1")
+
+    def test_registered_under_both_names(self):
+        for name in ("futdb", "futdatabase"):
+            self.assertIsInstance(sources.build(name), sources.FutDatabaseSource)

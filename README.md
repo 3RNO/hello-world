@@ -84,6 +84,7 @@ Four ways, in order of how much you should trust them:
 |---|---|---|
 | Manual | Type it into the dashboard | Always works |
 | CSV | `python3 -m futdash --import prices.csv` | Always works |
+| FUTDATABASE | `POST /api/refresh {"source": "futdb", "targets": [<ids>]}` | Documented API, needs a free key |
 | fut.gg | `POST /api/refresh {"source": "fut.gg", "targets": [...]}` | **Unverified** |
 | futbin | `POST /api/refresh {"source": "futbin", "targets": [...]}` | **Unverified** |
 
@@ -96,9 +97,11 @@ domains at the network policy, so neither adapter has ever made a real
 request. Treat them as a starting point. Each keeps its parsing in a
 single `_parse` method, and both raise a readable error rather than
 silently recording nothing, so when a site moves its markup you will know
-and there is one method to fix. `FUTDATABASE` (futdatabase.com) is a free
-API and is probably the better long-term source; there is no adapter for
-it yet.
+and there is one method to fix. `FUTDATABASE` (futdb.app) is the only one of the three with a documented,
+official API. It needs a free key and returns **one player per request**,
+so it cannot sweep the market — but for looking up a single card you are
+about to bid on, one request is the right shape. That adapter is written
+and its parsing is tested; the live call is not, for the same reason.
 
 Manual and CSV never break. Keep one wired up.
 
@@ -155,6 +158,7 @@ See [`tools/README.md`](tools/README.md).
 Environment variables, all optional:
 
 ```
+FUTDASH_FUTDB_KEY=       # free API key from futdb.app, for the futdb source
 FUTDASH_YEAR=27          # game year, used to build source URLs
 FUTDASH_PLATFORM=pc      # pc | console -- separate markets, different prices
 FUTDASH_MARGIN=0.2       # default target margin
