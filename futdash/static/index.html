@@ -88,6 +88,10 @@
         <input id="fodder-price" type="number" placeholder="Cheapest price" min="150" required>
         <button type="submit">Record</button>
       </form>
+      <form id="fodder-bulk" class="row-form" style="flex-direction:column;align-items:stretch;padding-top:0">
+        <textarea id="fodder-json" rows="3" placeholder='Or paste a whole ladder: {"84": 9000, "83": 4000, ...}' style="font-family:ui-monospace,monospace;font-size:12px;resize:vertical"></textarea>
+        <div><button type="submit">Record ladder</button></div>
+      </form>
       <div id="fodder-table"></div>
     </div>
   </section>

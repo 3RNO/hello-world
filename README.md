@@ -132,6 +132,18 @@ quietly. **The exact capture format is unverified** — it was built against
 plausible shapes, not a real response, so expect to send a sample if it
 does not take.
 
+## Getting bulk prices
+
+Neither FUTBIN nor fut.gg has a public API, FUTBIN blocks server-side
+scrapers, and the one free documented API cannot return more than one
+price per request. So the practical route is to read the data in your own
+browser, where you are already a legitimate visitor.
+
+[`tools/`](tools/) holds two console snippets for that: `capture-api.js`
+reads whatever JSON a price site fetches, and `scrape-ratings.js` pulls a
+cheapest-by-rating table straight into the format the Fodder tab accepts.
+See [`tools/README.md`](tools/README.md).
+
 ## Configuration
 
 Environment variables, all optional:

@@ -265,6 +265,18 @@ $('#fodder-form').onsubmit = async (e) => {
   loadFodder();
 };
 
+$('#fodder-bulk').onsubmit = async (e) => {
+  e.preventDefault();
+  let parsed;
+  try { parsed = JSON.parse($('#fodder-json').value.trim()); }
+  catch (err) { return toast('That is not valid JSON.'); }
+  const res = await post('/api/fodder', { prices: parsed });
+  if (res.error) return toast(res.error);
+  $('#fodder-json').value = '';
+  toast(`Recorded ${res.recorded} rating bands`);
+  refresh();
+};
+
 $('#buy-form').onsubmit = async (e) => {
   e.preventDefault();
   const res = await post('/api/trades', {
