@@ -63,6 +63,18 @@ CREATE TABLE IF NOT EXISTS watchlist (
     UNIQUE (player_id, platform)
 );
 
+CREATE TABLE IF NOT EXISTS club (
+    id          INTEGER PRIMARY KEY,
+    player_id   INTEGER REFERENCES players(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    rating      INTEGER,
+    version     TEXT NOT NULL DEFAULT 'standard',
+    untradeable INTEGER NOT NULL DEFAULT 0,
+    quantity    INTEGER NOT NULL DEFAULT 1,
+    imported_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_club_rating ON club (rating, untradeable);
+
 CREATE TABLE IF NOT EXISTS rating_floors (
     id       INTEGER PRIMARY KEY,
     rating   INTEGER NOT NULL,

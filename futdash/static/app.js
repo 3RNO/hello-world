@@ -124,6 +124,24 @@ async function loadFodder() {
   ], 'No rating prices recorded. Add the cheapest price per rating above.');
 }
 
+async function loadClub() {
+  const c = await get('/api/club');
+  const v = c.value;
+  $('#club-status').innerHTML = c.imported_at
+    ? `<p class="hint" style="padding:0 16px 14px">Last import ${c.imported_at.slice(0, 16).replace('T', ' ')} —
+       ${v.cards} cards, ${v.tradeable_cards} tradeable, worth
+       <strong>${coins(v.after_tax)}</strong> after tax${
+         v.unpriced_cards ? ` · <span class="warn">${v.unpriced_cards} without a known price</span>` : ''}</p>`
+    : '<p class="empty">No club imported yet.</p>';
+
+  $('#club-inventory').innerHTML = table(c.gaps.length ? c.gaps : c.inventory, [
+    { h: 'Rating', k: 'rating' },
+    { h: 'Held', k: 'have', fmt: (v, r) => (v ?? r.total ?? 0) },
+    { h: 'Cheapest', k: 'price', fmt: coins, num: true },
+    { h: 'Step ratio', k: 'step_ratio', fmt: (v) => (v == null ? '—' : v.toFixed(2) + '×'), num: true },
+  ], 'Import your club to see what you are holding.');
+}
+
 async function loadHoldings() {
   const [h, promos] = await Promise.all([get('/api/holdings'), get('/api/promos')]);
   $('#holdings').innerHTML = table(h, [
@@ -181,7 +199,7 @@ async function refresh() {
   await Promise.all([loadStats(), loadPlayers()]);
   const tab = document.querySelector('nav button.active').dataset.tab;
   await ({ market: loadMarket, snipe: loadSnipe, fodder: loadFodder,
-    holdings: loadHoldings, journal: loadJournal }[tab])();
+    club: loadClub, holdings: loadHoldings, journal: loadJournal }[tab])();
 }
 
 // ---- wiring --------------------------------------------------------------
@@ -226,6 +244,19 @@ $('#buy-form').onsubmit = async (e) => {
   if (res.error) return toast(res.error);
   $('#buy-price').value = '';
   toast('Buy logged');
+  refresh();
+};
+
+$('#club-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const raw = $('#club-json').value.trim();
+  if (!raw) return toast('Paste the club JSON first.');
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (err) { return toast('That is not valid JSON.'); }
+  const res = await post('/api/club', { payload: parsed });
+  if (!res.ok) return toast(res.error || 'Import failed.');
+  $('#club-json').value = '';
+  toast(`Imported ${res.imported} cards${res.with_prices ? `, ${res.with_prices} with prices` : ''}`);
   refresh();
 };
 

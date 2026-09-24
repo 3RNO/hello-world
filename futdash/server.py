@@ -15,7 +15,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import analytics, config, db, fodder, journal, snipe, sources
+from . import analytics, club, config, db, fodder, journal, snipe, sources
 
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 _lock = threading.Lock()
@@ -86,6 +86,14 @@ class Api:
         return {"table": fodder.table(self.conn, plat),
                 "best_value": fodder.best_value(self.conn, plat)}
 
+    def club(self, q):
+        plat = q.get("platform", config.PLATFORM)
+        last = self.conn.execute("SELECT MAX(imported_at) t FROM club").fetchone()["t"]
+        return {"inventory": club.inventory(self.conn),
+                "value": club.value(self.conn, plat),
+                "gaps": club.fodder_gaps(self.conn, platform=plat),
+                "imported_at": last}
+
     def promos(self, q):
         return [dict(r) for r in self.conn.execute(
             "SELECT * FROM promos ORDER BY starts_at").fetchall()]
@@ -119,6 +127,17 @@ class Api:
                           body.get("platform", config.PLATFORM), "manual")
         return {"ok": True, "recorded": n}
 
+    def import_club(self, body):
+        """Takes the capture itself, or {"payload": <capture>}."""
+        payload = body.get("payload", body) if isinstance(body, dict) else body
+        try:
+            players = club.load(payload)
+        except club.ClubImportError as exc:
+            return {"ok": False, "error": str(exc)}
+        return {"ok": True, **club.store(self.conn, players,
+                                         (body or {}).get("platform", config.PLATFORM)
+                                         if isinstance(body, dict) else config.PLATFORM)}
+
     def add_watch(self, body):
         pid = db.resolve_player(self.conn, body["name"], body.get("rating"),
                                 body.get("version"))
@@ -146,12 +165,13 @@ GETS = {
     "/api/summary": "summary", "/api/dips": "dips", "/api/movers": "movers",
     "/api/players": "players", "/api/trades": "trades", "/api/holdings": "holdings",
     "/api/performance": "performance", "/api/snipe": "snipe",
-    "/api/fodder": "fodder", "/api/promos": "promos",
+    "/api/fodder": "fodder", "/api/promos": "promos", "/api/club": "club",
 }
 POSTS = {
     "/api/prices": "add_price", "/api/trades": "add_trade",
     "/api/trades/close": "close_trade", "/api/fodder": "add_fodder",
     "/api/watch": "add_watch", "/api/refresh": "refresh",
+    "/api/club": "import_club",
 }
 HISTORY_RE = re.compile(r"^/api/history/(\d+)$")
 

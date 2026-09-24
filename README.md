@@ -57,6 +57,11 @@ SBCs.
 **Holdings** — open positions marked against the latest known price, with
 break-even including tax.
 
+**Club** — paste a club scan in and it records what you own, split by
+tradeable and untradeable, with tradeable value after tax. This is what
+turns the fodder tab from *which band is cheap* into *which band is cheap
+and you are short of*.
+
 **Journal** — every trade, and post-tax ROI grouped by method. This is the
 number that should steer where you spend your time.
 
@@ -85,6 +90,29 @@ API and is probably the better long-term source; there is no adapter for
 it yet.
 
 Manual and CSV never break. Keep one wired up.
+
+## Importing your club
+
+The club scanners (EasySBC and similar) have no export button, so the
+import takes a JSON capture from your browser instead:
+
+1. Open your club page on the scanner site while signed in.
+2. DevTools (`F12`) → **Network** tab → reload the page.
+3. Find the request whose response holds your player list — usually the
+   largest JSON response, often named something like `club` or `players`.
+4. Copy the response body, and paste it into the **Club** tab.
+
+The parser does not assume a schema. It searches the payload for the
+largest list of objects carrying both a name and a rating, and accepts the
+field spellings these tools are known to use (`name` / `commonName` /
+`playerName`, `rating` / `overall` / `ovr`, and `untradeable` or
+`tradeable` either way round). If the capture carries prices, those are
+recorded too.
+
+If it cannot read the payload it says why rather than importing nothing
+quietly. **The exact capture format is unverified** — it was built against
+plausible shapes, not a real response, so expect to send a sample if it
+does not take.
 
 ## Configuration
 

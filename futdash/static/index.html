@@ -27,6 +27,7 @@
   <button data-tab="market" class="active">Market</button>
   <button data-tab="snipe">Snipe filters</button>
   <button data-tab="fodder">Fodder</button>
+  <button data-tab="club">Club</button>
   <button data-tab="holdings">Holdings</button>
   <button data-tab="journal">Journal</button>
 </nav>
@@ -88,6 +89,27 @@
         <button type="submit">Record</button>
       </form>
       <div id="fodder-table"></div>
+    </div>
+  </section>
+
+  <section class="tab hidden" id="tab-club">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Import your club</h2>
+        <p class="hint">No export button exists, so paste the JSON your browser received. DevTools &rarr; Network &rarr; reload &rarr; the response holding your player list &rarr; copy it here.</p>
+      </div>
+      <form id="club-form" class="row-form" style="flex-direction:column;align-items:stretch">
+        <textarea id="club-json" rows="5" placeholder="Paste the club JSON here" style="font-family:ui-monospace,monospace;font-size:12px;resize:vertical"></textarea>
+        <div><button type="submit">Import club</button></div>
+      </form>
+      <div id="club-status"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>What you hold</h2>
+        <p class="hint">Untradeable cards are counted but excluded from value &mdash; they are not coins you can spend.</p>
+      </div>
+      <div id="club-inventory"></div>
     </div>
   </section>
 

@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from futdash import analytics, db, demo, fodder, journal, snipe, sources, tax
+from futdash import analytics, club, db, demo, fodder, journal, snipe, sources, tax
 
 
 class TestTax(unittest.TestCase):
@@ -279,3 +279,80 @@ class TestDemo(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestClubImport(unittest.TestCase):
+    """The capture format is a guess, so tolerance is the thing under test."""
+
+    FLAT = [{"name": "Rodri", "rating": 89, "untradeable": False, "price": 200_000},
+            {"name": "Saka", "rating": 87, "untradeable": True}]
+    WRAPPED = {"data": {"club": {"players": [
+        {"commonName": "Rodri", "overall": 89, "isUntradeable": 0, "marketPrice": 200_000},
+        {"commonName": "Saka", "overall": 87, "isUntradeable": 1}]}}}
+    POSITIVE = {"items": [{"playerName": "Rodri", "ovr": 89, "tradeable": True},
+                          {"playerName": "Saka", "ovr": 87, "tradeable": False}]}
+
+    def setUp(self):
+        self.conn = db.connect(":memory:")
+
+    def test_reads_a_flat_list(self):
+        self.assertEqual(len(club.load(self.FLAT)), 2)
+
+    def test_reads_a_wrapped_payload(self):
+        self.assertEqual([p["name"] for p in club.load(self.WRAPPED)], ["Rodri", "Saka"])
+
+    def test_alternate_field_spellings(self):
+        self.assertEqual(club.load(self.WRAPPED)[0]["rating"], 89)
+
+    def test_tradeable_stated_positively_is_inverted(self):
+        rows = {p["name"]: p for p in club.load(self.POSITIVE)}
+        self.assertEqual(rows["Rodri"]["untradeable"], 0)
+        self.assertEqual(rows["Saka"]["untradeable"], 1)
+
+    def test_picks_players_out_of_surrounding_noise(self):
+        payload = {"meta": {"v": 1}, "filters": [{"id": 1}], "squad": {"players": [
+            {"name": "A", "rating": 84}, {"name": "B", "rating": 85}]}}
+        self.assertEqual(len(club.load(payload)), 2)
+
+    def test_accepts_a_json_string(self):
+        import json as _json
+        self.assertEqual(len(club.load(_json.dumps(self.FLAT))), 2)
+
+    def test_rejects_non_json(self):
+        with self.assertRaises(club.ClubImportError):
+            club.load("<html>blocked</html>")
+
+    def test_rejects_a_payload_with_no_players(self):
+        with self.assertRaises(club.ClubImportError):
+            club.load({"settings": {"theme": "dark"}})
+
+    def test_store_and_inventory(self):
+        club.store(self.conn, club.load(self.FLAT))
+        inv = {r["rating"]: r for r in club.inventory(self.conn)}
+        self.assertEqual(inv[89]["tradeable"], 1)
+        self.assertEqual(inv[87]["untradeable"], 1)
+
+    def test_import_replaces_rather_than_accumulates(self):
+        club.store(self.conn, club.load(self.FLAT))
+        club.store(self.conn, club.load(self.FLAT))
+        self.assertEqual(sum(r["total"] for r in club.inventory(self.conn)), 2)
+
+    def test_value_excludes_untradeable_cards(self):
+        club.store(self.conn, club.load(self.FLAT))
+        v = club.value(self.conn)
+        # Only Rodri is sellable, and the 5% tax comes off.
+        self.assertEqual(v["gross"], 200_000)
+        self.assertEqual(v["after_tax"], 190_000)
+        self.assertEqual(v["tradeable_cards"], 1)
+
+    def test_prices_in_the_capture_are_recorded(self):
+        info = club.store(self.conn, club.load(self.FLAT))
+        self.assertEqual(info["with_prices"], 1)
+
+    def test_fodder_gaps_report_shortfall(self):
+        club.store(self.conn, club.load(self.FLAT))
+        fodder.record(self.conn, {87: 4_000, 89: 25_000})
+        gaps = {g["rating"]: g for g in club.fodder_gaps(self.conn, need={89: 3})}
+        self.assertEqual(gaps[89]["have"], 1)
+        self.assertEqual(gaps[89]["short_by"], 2)
+        self.assertEqual(gaps[89]["cost_to_fill"], 50_000)
