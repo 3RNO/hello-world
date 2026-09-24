@@ -25,6 +25,7 @@
 
 <nav id="tabs">
   <button data-tab="market" class="active">Market</button>
+  <button data-tab="player">Player</button>
   <button data-tab="snipe">Snipe filters</button>
   <button data-tab="fodder">Fodder</button>
   <button data-tab="club">Club</button>
@@ -52,6 +53,41 @@
         <div class="panel-head"><h2>Falling</h2></div>
         <div id="movers-down"></div>
       </div>
+    </div>
+  </section>
+
+  <section class="tab hidden" id="tab-player">
+    <div class="panel">
+      <div class="panel-head"><h2>Look up a card</h2></div>
+      <form id="player-form" class="row-form">
+        <input id="player-search" list="player-list" placeholder="Player name" required>
+        <button type="submit">Show</button>
+        <button type="button" id="player-fetch" class="ghost">Fetch live price</button>
+      </form>
+      <div id="player-summary"></div>
+    </div>
+    <div class="panel" id="player-chart-panel">
+      <div class="panel-head"><h2 id="player-chart-title">Price history</h2></div>
+      <div class="viz-range">
+        <button data-days="7">7d</button>
+        <button data-days="30" class="active">30d</button>
+        <button data-days="90">90d</button>
+        <button type="button" id="player-table-toggle" class="ghost" style="margin-left:auto">Table</button>
+      </div>
+      <div class="viz" id="player-chart"></div>
+      <div id="player-table" class="hidden"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Record a price</h2>
+        <p class="hint">Fastest reliable way in. Live fetch depends on a source that may be blocked or may have moved.</p>
+      </div>
+      <form id="price-form" class="row-form">
+        <input id="price-name" list="player-list" placeholder="Player" required>
+        <input id="price-value" type="number" placeholder="Price" min="150" required>
+        <input id="price-rating" type="number" placeholder="Rating" min="40" max="99">
+        <button type="submit">Record</button>
+      </form>
     </div>
   </section>
 
@@ -166,6 +202,7 @@
 </main>
 
 <div id="toast" class="toast hidden"></div>
+<script src="chart.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

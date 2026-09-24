@@ -86,6 +86,34 @@ class Api:
         return {"table": fodder.table(self.conn, plat),
                 "best_value": fodder.best_value(self.conn, plat)}
 
+    def player(self, q):
+        """Everything known about one card: stats, history, filter."""
+        name = q.get("name")
+        pid = q.get("player_id")
+        if name and not pid:
+            row = self.conn.execute(
+                "SELECT id FROM players WHERE LOWER(name) = LOWER(?)", (name,)).fetchone()
+            if row is None:
+                return {"error": f"no card called {name!r} is tracked yet"}
+            pid = row["id"]
+        if not pid:
+            return {"error": "give a name or player_id"}
+        pid = int(pid)
+        plat = q.get("platform", config.PLATFORM)
+        days = int(q.get("days", 30))
+        row = self.conn.execute(
+            "SELECT id, name, rating, version FROM players WHERE id = ?", (pid,)).fetchone()
+        if row is None:
+            return {"error": f"no player {pid}"}
+        return {
+            "player": dict(row),
+            "stats": analytics.stats(self.conn, pid, plat, days),
+            "history": analytics.history(self.conn, pid, plat, days),
+            "filter": snipe.for_player(self.conn, pid,
+                                       float(q.get("margin", config.TARGET_MARGIN)),
+                                       plat, days),
+        }
+
     def club(self, q):
         plat = q.get("platform", config.PLATFORM)
         last = self.conn.execute("SELECT MAX(imported_at) t FROM club").fetchone()["t"]
@@ -178,6 +206,7 @@ GETS = {
     "/api/players": "players", "/api/trades": "trades", "/api/holdings": "holdings",
     "/api/performance": "performance", "/api/snipe": "snipe",
     "/api/fodder": "fodder", "/api/promos": "promos", "/api/club": "club",
+    "/api/player": "player",
 }
 POSTS = {
     "/api/prices": "add_price", "/api/trades": "add_trade",

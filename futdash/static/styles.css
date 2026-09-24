@@ -114,3 +114,40 @@ button.ghost { background: var(--bg); color: var(--text); border-color: var(--bo
   box-shadow: 0 6px 24px rgba(0,0,0,.18); z-index: 9;
 }
 .hidden { display: none !important; }
+
+/* --- chart -------------------------------------------------------------
+   Values from the reference data-viz palette. One series, so one hue and
+   no legend: the panel heading names the card. */
+:root {
+  --viz-surface:     #fcfcfb;
+  --viz-series-1:    #2a78d6;
+  --viz-grid:        #e3e6ea;
+  --viz-text-muted:  #52514e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --viz-surface:    #1a1a19;
+    --viz-series-1:   #3987e5;
+    --viz-grid:       #2b3039;
+    --viz-text-muted: #c3c2b7;
+  }
+}
+:root[data-theme="dark"] {
+  --viz-surface:    #1a1a19;
+  --viz-series-1:   #3987e5;
+  --viz-grid:       #2b3039;
+  --viz-text-muted: #c3c2b7;
+}
+
+.viz { position: relative; padding: 8px 16px 16px; }
+.viz-tip {
+  position: absolute; transform: translate(-50%, -100%);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 6px 10px; pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18); white-space: nowrap; z-index: 3;
+}
+.viz-tip-value { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text); }
+.viz-tip-label { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.viz-range { display: flex; gap: 6px; padding: 12px 16px 0; align-items: center; }
+.viz-range button { background: var(--bg); color: var(--muted); border: 1px solid var(--border); padding: 4px 10px; font-size: 13px; }
+.viz-range button.active { background: var(--accent); color: #fff; border-color: transparent; }

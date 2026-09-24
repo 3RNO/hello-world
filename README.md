@@ -57,6 +57,12 @@ SBCs.
 **Holdings** — open positions marked against the latest known price, with
 break-even including tax.
 
+**Player** — look up any tracked card: current price against its median,
+low and high, the price you'd have to snipe under, and a price-history
+chart over 7, 30 or 90 days. A crosshair finds the date and the tooltip
+leads with the number; a table view sits behind a toggle so the data is
+reachable without hovering or colour.
+
 **Club** — paste a club scan in and it records what you own. From an
 EasySBC stats capture that means coins, club value, and how many cards you
 hold at every rating along with their SBC score.

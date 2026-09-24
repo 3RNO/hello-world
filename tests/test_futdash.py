@@ -440,3 +440,34 @@ class TestEasySbcStats(unittest.TestCase):
         fodder.record(self.conn, {84: 9_000})
         by_rating = {r["rating"]: r for r in easysbc.ladder(self.conn)}
         self.assertEqual(by_rating[84]["held_value"], 10 * 9_000)
+
+
+class TestPlayerLookup(unittest.TestCase):
+    """The on-demand lookup the Player tab reads."""
+
+    def setUp(self):
+        self.conn = db.connect(":memory:")
+        self.pid = db.upsert_player(self.conn, "Lookup Target", 86, "gold rare")
+        for v in (10_000, 11_000, 9_500, 10_500):
+            sources.record(self.conn, [sources.Quote("Lookup Target", v, rating=86,
+                                                     version="gold rare")])
+
+    def test_history_is_oldest_first(self):
+        h = analytics.history(self.conn, self.pid)
+        self.assertEqual([p["price"] for p in h], [10_000, 11_000, 9_500, 10_500])
+
+    def test_history_respects_the_window(self):
+        self.assertEqual(len(analytics.history(self.conn, self.pid, days=30)), 4)
+
+    def test_stats_and_filter_agree_on_the_latest_price(self):
+        st = analytics.stats(self.conn, self.pid)
+        f = snipe.for_player(self.conn, self.pid, 0.2)
+        self.assertEqual(st["latest"], f["market_now"])
+
+    def test_lookup_is_case_insensitive_by_name(self):
+        row = self.conn.execute(
+            "SELECT id FROM players WHERE LOWER(name) = LOWER(?)", ("lookup target",)).fetchone()
+        self.assertEqual(row["id"], self.pid)
+
+    def test_history_carries_its_source(self):
+        self.assertTrue(all(p["source"] for p in analytics.history(self.conn, self.pid)))

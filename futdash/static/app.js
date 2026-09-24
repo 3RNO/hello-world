@@ -220,6 +220,43 @@ async function loadJournal() {
   ], 'No trades logged yet.');
 }
 
+let playerView = { id: null, days: 30, table: false };
+
+async function loadPlayer() {
+  if (!playerView.id) {
+    $('#player-summary').innerHTML = '<p class="empty">Search for a card above.</p>';
+    $('#player-chart').textContent = '';
+    return;
+  }
+  const d = await get('/api/player', { player_id: playerView.id, days: playerView.days });
+  if (d.error) return toast(d.error);
+  const st = d.stats, f = d.filter;
+  $('#player-chart-title').textContent =
+    `${d.player.name}${d.player.rating ? ` (${d.player.rating})` : ''} — price history`;
+
+  $('#player-summary').innerHTML = st ? `<div class="tiles" style="padding:0 16px 16px">${[
+    ['Now', coins(st.latest), ''],
+    ['Median', coins(st.median), ''],
+    ['Low', coins(st.low), ''],
+    ['High', coins(st.high), ''],
+    ['vs median', pct(st.vs_median_pct), cls(-st.vs_median_pct)],
+    ['Snipe under', f ? coins(f.max_buy_now) : '—', ''],
+  ].map(([k, v, c]) => `<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div></div>`).join('')}</div>`
+    : '<p class="empty">No prices recorded for this card yet.</p>';
+
+  const pts = (d.history || []).map((h) => ({ ts: h.ts, price: h.price, source: h.source }));
+  if (playerView.table) {
+    $('#player-table').innerHTML = window.futdashChart.priceTable(pts);
+    $('#player-table').classList.remove('hidden');
+    $('#player-chart').classList.add('hidden');
+  } else {
+    $('#player-table').classList.add('hidden');
+    $('#player-chart').classList.remove('hidden');
+    window.futdashChart.priceChart($('#player-chart'), pts,
+      { label: `Price history for ${d.player.name}` });
+  }
+}
+
 async function loadPlayers() {
   state.players = await get('/api/players');
   $('#player-list').innerHTML = state.players
@@ -229,7 +266,7 @@ async function loadPlayers() {
 async function refresh() {
   await Promise.all([loadStats(), loadPlayers()]);
   const tab = document.querySelector('nav button.active').dataset.tab;
-  await ({ market: loadMarket, snipe: loadSnipe, fodder: loadFodder,
+  await ({ market: loadMarket, player: loadPlayer, snipe: loadSnipe, fodder: loadFodder,
     club: loadClub, holdings: loadHoldings, journal: loadJournal }[tab])();
 }
 
@@ -263,6 +300,55 @@ $('#fodder-form').onsubmit = async (e) => {
   $('#fodder-price').value = '';
   toast(`Recorded cheapest ${rating}-rated`);
   loadFodder();
+};
+
+$('#player-form').onsubmit = (e) => {
+  e.preventDefault();
+  const name = $('#player-search').value.trim();
+  const p = state.players.find((x) => x.name.toLowerCase() === name.toLowerCase());
+  if (!p) return toast('No prices recorded for that card yet — record one below.');
+  playerView.id = p.id;
+  loadPlayer();
+};
+
+$('#player-fetch').onclick = async () => {
+  const name = $('#player-search').value.trim();
+  if (!name) return toast('Name a card first.');
+  toast('Fetching…');
+  const res = await post('/api/refresh', { source: 'fut.gg', targets: [name] });
+  // The live sources are unverified, so say exactly what went wrong.
+  toast(res.ok ? `Recorded ${res.recorded} price(s)` : res.error);
+  if (res.ok) refresh();
+};
+
+document.querySelectorAll('.viz-range button[data-days]').forEach((b) => {
+  b.onclick = () => {
+    document.querySelectorAll('.viz-range button[data-days]')
+      .forEach((x) => x.classList.remove('active'));
+    b.classList.add('active');
+    playerView.days = +b.dataset.days;
+    loadPlayer();
+  };
+});
+
+$('#player-table-toggle').onclick = () => {
+  playerView.table = !playerView.table;
+  $('#player-table-toggle').textContent = playerView.table ? 'Chart' : 'Table';
+  loadPlayer();
+};
+
+$('#price-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const rating = $('#price-rating').value;
+  const res = await post('/api/prices', {
+    name: $('#price-name').value.trim(),
+    price: +$('#price-value').value,
+    rating: rating ? +rating : null,
+  });
+  if (res.error) return toast(res.error);
+  $('#price-value').value = '';
+  toast('Price recorded');
+  refresh();
 };
 
 $('#fodder-bulk').onsubmit = async (e) => {
