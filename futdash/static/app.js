@@ -122,6 +122,17 @@ async function loadFodder() {
     { h: 'Step ratio', k: 'step_ratio', fmt: (v) => (v === null ? '—' : v.toFixed(2) + '×'), num: true },
     { h: '', k: 'rating', fmt: (v) => (best.has(v) ? '<span class="good">best value</span>' : '') },
   ], 'No rating prices recorded. Add the cheapest price per rating above.');
+
+  $('#fodder-movement').innerHTML = table(f.movement, [
+    { h: 'Rating', k: 'rating' },
+    { h: 'Was', k: 'first', fmt: (x) => (x == null ? '—' : coins(x)), num: true },
+    { h: 'Now', k: 'latest', fmt: coins, num: true },
+    { h: 'Change', k: 'change_pct', num: true,
+      // A rising fodder price is bad news for a buyer, so the colour is inverted.
+      fmt: (x) => (x == null ? '<span class="sub">first reading</span>' : pct(x)),
+      cls: (x) => (x == null ? '' : cls(-x)) },
+    { h: 'Readings', k: 'samples', num: true },
+  ], 'Nothing recorded yet.');
 }
 
 async function loadClub() {

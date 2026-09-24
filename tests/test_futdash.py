@@ -545,3 +545,33 @@ class TestRealLadder(unittest.TestCase):
     def test_ranking_is_not_simply_by_rating(self):
         order = [r["rating"] for r in easysbc.best_buys(self.conn, limit=4)]
         self.assertEqual(order, [84, 83, 81, 82])
+
+
+class TestFodderMovement(unittest.TestCase):
+    """Whether an edge is still open, which is what a second scrape is for."""
+
+    def setUp(self):
+        self.conn = db.connect(":memory:")
+
+    def test_single_reading_is_reported_not_hidden(self):
+        fodder.record(self.conn, {84: 650})
+        row = fodder.movement(self.conn)[0]
+        self.assertEqual(row["latest"], 650)
+        self.assertIsNone(row["change_pct"])
+        self.assertEqual(row["samples"], 1)
+
+    def test_a_rise_is_reported(self):
+        fodder.record(self.conn, {84: 650})
+        fodder.record(self.conn, {84: 900})
+        row = {r["rating"]: r for r in fodder.movement(self.conn)}[84]
+        self.assertEqual((row["first"], row["latest"]), (650, 900))
+        self.assertAlmostEqual(row["change_pct"], 38.46, places=1)
+
+    def test_a_fall_is_reported(self):
+        fodder.record(self.conn, {84: 900})
+        fodder.record(self.conn, {84: 650})
+        self.assertLess({r["rating"]: r for r in fodder.movement(self.conn)}[84]["change_pct"], 0)
+
+    def test_every_band_appears(self):
+        fodder.record(self.conn, {82: 650, 83: 650, 84: 650})
+        self.assertEqual({r["rating"] for r in fodder.movement(self.conn)}, {82, 83, 84})

@@ -88,6 +88,30 @@ def best_value(conn, platform: str = config.PLATFORM, limit: int = 5) -> list[di
     return rows[:limit]
 
 
+def movement(conn, platform: str = config.PLATFORM, days: int = 7) -> list[dict]:
+    """How each band has moved since its earliest reading in the window.
+
+    This is what says whether an edge is still open. A band that was cheap
+    yesterday and is 40% dearer today has been noticed, and the window on
+    it is closing.
+    """
+    ratings = [r["rating"] for r in conn.execute(
+        "SELECT DISTINCT rating FROM rating_floors WHERE platform = ? ORDER BY rating DESC",
+        (platform,)).fetchall()]
+    out = []
+    for rating in ratings:
+        d = drift(conn, rating, platform, days)
+        if d is None:
+            # Only one reading so far -- report it rather than hiding the band.
+            cur = latest(conn, platform).get(rating)
+            if cur:
+                out.append({"rating": rating, "latest": cur["price"], "first": None,
+                            "change_pct": None, "samples": 1})
+            continue
+        out.append(d)
+    return out
+
+
 def drift(conn, rating: int, platform: str = config.PLATFORM, days: int = 7) -> dict | None:
     """How one band has moved over `days` -- fodder trends before an SBC."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")

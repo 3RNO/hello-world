@@ -84,7 +84,8 @@ class Api:
     def fodder(self, q):
         plat = q.get("platform", config.PLATFORM)
         return {"table": fodder.table(self.conn, plat),
-                "best_value": fodder.best_value(self.conn, plat)}
+                "best_value": fodder.best_value(self.conn, plat),
+                "movement": fodder.movement(self.conn, plat, int(q.get("days", 7)))}
 
     def player(self, q):
         """Everything known about one card: stats, history, filter."""
